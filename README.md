@@ -10,6 +10,7 @@ Download all files from your pucrs moodle account
 - - urllib2
 - - cookielib
 - - re
+- - lxml
 
 # Run:
 ``python
