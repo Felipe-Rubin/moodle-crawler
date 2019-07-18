@@ -145,38 +145,23 @@ def write_file(path,data):
 
 
 
-
-class ActivityParser:
-	def __init__(self):
-		types = ['activity label modtype_label ',
-		'activity resource modtype_resource ',
-		'activity label modtype_label ',
-		'activity url modtype_url ',
-		'activity page modtype_page ',
-		'activity assign modtype_assign ',
-		]
-	# Converts HTML to Github Markdown
-	def html2md(self,text=[]):
-		outmd = ''
-		# for t in text:
-		# 	if t.name == 'h1':
-		# 		outmd += t.string+'#'
-		# 	elif t.name == 'h2':
-		# 		outmd += t.string+'##'
-		# 	elif t.name == 'h3':
-		# 		outmd += t.string+'###'
-		# 	elif t.name == 'h4':
-		# 		outmd += t.string+'####'
-		# 	elif t.name == 'h5':
-		# 		outmd += t.string+'#####'
-		# 	elif t.name == 'h6':
-		# 		outmd += t.string+'######'
-		# 	elif t.name == 'p':
-		return ''
-
-	def download_activity(self,activity):
-		return 0		
-
+#Link: Link of activity page
+#reslink: Link of activity resource
+class Activity:
+	def __init__(self,name,link,reslink=''):
+		# types = ['activity label modtype_label ',
+		# 'activity resource modtype_resource ',
+		# 'activity label modtype_label ',
+		# 'activity url modtype_url ',
+		# 'activity page modtype_page ',
+		# 'activity assign modtype_assign ',
+		# ]
+		self.name = name
+		self.link = link
+		self.reslink = reslink
+		
+	def __str__(self):
+		return str(self.name) + ' '+str(self.link)+' '+str(self.reslink)
 
 class Resource:
 	def __init__(self,name,link):
@@ -184,6 +169,7 @@ class Resource:
 		self.link = link
 	def __str__(self):
 		return str(self.name) + ' '+str(self.link)
+
 # Parser responsible for parsing a section content
 class SectionParser:
 	# def __init__(self):
@@ -229,17 +215,21 @@ class SectionParser:
 			return workaround.a['href']
 		else:
 			# section.find('object',{'id':{'resourceworkaround'}})
-			return section.find('object',id='resourceobject')['data']
+			resourceobject = section.find('object',id='resourceobject')
+			if resourceobject is not None:
+				return resourceobject['data']
+			else:
+				return None
 
-			
-	def find_urls(self,section):
-		#activity url modtype_url 
-		# instancename
-		urls = []
-		return 0
-
-	def __str__(self):
-		return 'NOREPRESENTATION'
+	def find_activities(self,section):
+		activities = []
+		modactivities = section.findAll('li',{'class':{'activity page modtype_page'}})
+		for activity in modactivities:
+			res =  activity.find('div',{'class':{'activityinstance'}})
+			name = res.a.find('span',class_='instancename').contents[0]
+			link = res.a['href']
+			activities.append(Activity(name,link))
+		return activities
 
 
 def parse_content_sections(course_content):
@@ -262,13 +252,23 @@ def download_course_content(path,course_content,br):
 		print(sc.find_summary(section))
 		print("##RESOURCES##")
 		for res in sc.find_resources(section):
-			print('Finding Actual Resource for link: ',res.link)
 			br.open(res.link)
 			if br.get_url() != res.link:
 				res.link = br.get_url()
 			else:
 				res.link = sc.find_actual_resource(br.get_current_page())	
 			print('Resource: ',res)
+		
+		print("##ACTIVITIES##")	
+		for act in sc.find_activities(section):
+			br.open(act.link)
+			print('at least acccessed link: ',br.get_url())
+			if br.get_url() != act.link: # Must check if it won't open directly ?
+				act.link = br.get_url() #There wasn't any description, just redirect
+				act.reslink = br.get_url()
+			else:
+				act.reslink = sc.find_actual_resource(br.get_current_page())				
+			print("Activity: ",act)
 		print("#############")
 		# sc.find_files()
 	print('############')
